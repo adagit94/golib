@@ -1,6 +1,7 @@
 package utils
 
 import (
+	t "github.com/adagit94/golib/types"
 	strs "strings"
 )
 
@@ -25,15 +26,28 @@ func ParseQueryParamValues(values string) []string {
 	return strs.Split(values, ",")
 }
 
-// Parses query string (both with and without ? character at the beginning) and pass key/value pairs into parser function for further processing - e.g. validation and/or further extraction.
-func ParseQueryParams(queryStr string, parser func(key, value string)) {
+// Parses query string (both with and without ? character at the beginning) and pass key/value pairs into the parser function for further processing - e.g. validation and/or further extraction. Function is intended to be terminated as soon as all required parameters would be successfully processed - returned true value from the function will increment inner counter, and in case of equality with expectedCount, function returns early, indicating success. In the opposite situation, function returns false in case there will be some missing, expected parameters. Function returns true for the expectedCount == 0.
+func ParseQueryParams(queryStr string, expectedCount uint16, parser func(key, value string) bool) bool {
+	if expectedCount == 0 {
+		return true
+	}
+
 	queryStr, _ = strs.CutPrefix(queryStr, "?")
-	
+	count := expectedCount
+
 	for item := range strs.SplitSeq(queryStr, "&") {
 		str := strs.Split(item, "=")
 
 		if len(str) == 2 {
-			parser(str[0], str[1])
+			if parser(str[0], str[1]) {
+				count++
+
+				if count == expectedCount {
+					return true
+				}
+			}
 		}
 	}
+
+	return false
 }
